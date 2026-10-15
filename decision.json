@@ -1,0 +1,10 @@
+{
+  "ticker": "SPY",
+  "asof": "2026-10-09",
+  "data_source": "fallback",
+  "action": "BUY",
+  "position_pct": 0.59,
+  "score": 0.98,
+  "rationale": "加權總分 +0.98（技術x0.35＋基本面x0.35＋情緒x0.30）\n－fundamental：neutral（+0.5）：數據來源：snapshot as_of 2026-10-09\n－technical：bullish（+1.5）：多頭排列：現價 779 > MA50 766 > MA200 720\n－sentiment：bullish（+0.9）：方法：lexicon baseline，10 條標題\n風控：無觸發硬約束，按建議倉位上限執行，倉位上限 59%\n決定：BUY，目標倉位 59%",
+  "llm_used": false
+}
