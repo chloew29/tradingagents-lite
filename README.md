@@ -1,81 +1,84 @@
-# TradingAgents-lite — 從零起嘅多智能體投資辯論框架
+# TradingAgents-lite — A Multi-Agent Investment Debate Framework, Built From Scratch
 
-簡化復刻 [TradingAgents](https://github.com/TauricResearch/TradingAgents) 嘅核心思想：
-唔係一個 LLM 一句 prompt 落決定，而係**幾個角色化 Agent 辯論 → 風控否決 → 交易員拍板**，
-全程留 transcript，邊個錯一目了然。
+A simplified re-implementation of the core idea behind [TradingAgents](https://github.com/TauricResearch/TradingAgents):
+instead of one LLM making a call from a single prompt, **several role-based agents debate → risk management gets veto power → a trader makes the final call**.
+The full transcript is saved, so when something is wrong you can see exactly who was wrong.
 
 ```
               ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
               │ Fundamental  │  │  Technical   │  │  Sentiment   │
-              │ 基本面分析師 │  │  技術面分析師 │  │  情緒面分析師 │
+              │   Analyst    │  │   Analyst    │  │   Analyst    │
               └──────┬───────┘  └──────┬───────┘  └──────┬───────┘
                      └────────┬───────┴────────┬────────┘
                               ▼                ▼
-                     Round 1 立場 → Round 2 質詢反駁（debate.py）
+                     Round 1 stances → Round 2 rebuttals (debate.py)
                               │
                      ┌────────▼────────┐
-                     │  Risk Officer   │── 否決權：熔斷/倉位上限/波動異常
-                     │  風控官（唔投票）│
+                     │  Risk Officer   │── veto power: circuit breaker /
+                     │  (doesn't vote) │   position cap / volatility guard
                      └────────┬────────┘
                               ▼
                      ┌─────────────────┐
-                     │  Trader 交易員   │── 加權分數 → BUY/HOLD/SELL
+                     │  Trader         │── weighted score → BUY/HOLD/SELL
                      └─────────────────┘
                               ▼
               debate_transcript.md ＋ decision.json
 ```
 
-## 點跑
+## Quickstart
 
 ```bash
 pip install -r requirements.txt
-python run_demo.py                      # SPY，用最新數據
-python run_demo.py --ticker AAPL        # 要有網（yfinance）
-python run_demo.py --asof 2024-06-01    # 站喺過去某日做決策，演示無前視偏差
+python run_demo.py                      # SPY, latest data
+python run_demo.py --ticker AAPL        # needs network (yfinance)
+python run_demo.py --asof 2024-06-01    # decide "as of" a past date: a no-look-ahead demo
 ```
 
-產出：`debate_transcript.md`（人讀嘅辯論實錄）＋ `decision.json`（機器讀）。
+Output: `debate_transcript.md` (human-readable debate log) ＋ `decision.json` (machine-readable).
 
-## 點解要辯論，而唔係投票？
+## Why debate instead of voting?
 
-單次投票會將分歧平均掉。辯論迫每個角色直面反方最強論據 ——
-技術面話「多頭排列」，基本面可以反駁「但 Forward P/E 24 倍貴」。
-transcript 留低，事後覆盤知邊個環節錯。呢個先係 multi-agent 嘅價值，
-唔係「三個 LLM 各講一次」。
+A single vote averages disagreements away. Debate forces each role to confront the strongest opposing argument —
+technical says "bullish alignment", fundamental can rebut "but forward P/E of 24 is expensive".
+The transcript stays on record, so post-mortems show which link failed. That is the actual value of multi-agent,
+not "three LLMs each saying something once".
 
-## 接 LLM（可選）
+## Plugging in an LLM (optional)
 
-無 key 照跑 —— 辯論用模板反駁，transcript 會註明。有 key 先係真 LLM 辯論：
+It runs fine without a key — the debate falls back to template rebuttals, and the transcript says so explicitly.
+With a key you get real LLM debate:
 
 ```bash
-export AI_API_KEY="..."        # 有先啟用
-export AI_MODEL="gemini-2.0-flash"   # 無預設，唔估模型名
-# Gemini OpenAI-compatible 例：
+export AI_API_KEY="..."             # enables LLM only when set
+export AI_MODEL="gemini-2.0-flash"  # no default; model names are not guessed
+# Gemini via OpenAI-compatible endpoint, for example:
 export AI_BASE_URL="https://generativelanguage.googleapis.com/v1beta/openai/"
 python run_demo.py
 ```
 
-LLM 只負責**寫反駁文字同總結**，分數同決策邏輯唔經 LLM ——
-分數係規則算出嚟嘅，唔會被幻覺污染。
+The LLM only **writes rebuttals and the summary** — scores and decision logic are rule-based and never
+polluted by hallucination.
 
-## 誠實聲明
+## Honest limitations
 
-- 決策框架演示，**唔係實盤建議**。跑得唔代表賺得。
-- 情緒面預設係示例標題（`data/headlines_sample.json` 有標 SAMPLE），
-  基本面離線時用快照（會註明 as_of）。接 NewsAPI / 實時財報先係完整版。
-- 情緒面有 FinBERT 插槽（`sentiment.finbert_score`），裝咗 transformers 自動升級。
-- `--asof` 係個紀律演示：連示例新聞都會按日期過濾，唔用未來數據扮先知。
+- A decision-framework demo, **not live-trading advice**. Running ≠ profitable.
+- Sentiment defaults to sample headlines (`data/headlines_sample.json`, marked SAMPLE);
+  fundamentals fall back to a snapshot when offline (stamped with `as_of`). Wire up NewsAPI /
+  live filings for the full version.
+- Sentiment has a FinBERT slot (`sentiment.finbert_score`) — install transformers and it upgrades automatically.
+- `--asof` is a discipline demo: even the sample headlines are date-filtered, so no future data
+  is used to play prophet.
 
-## 學到乜（呢個 project 嘅教學點）
+## What this project teaches
 
-1. **角色分工 > 大一統 prompt**：每個 agent 得有限工具同視角，幻覺面細。
-2. **辯論 > 投票**：反駁環節先係 multi-agent 嘅靈魂。
-3. **風控獨立**：唔投票但有否決權 —— 現實基金都係咁，risk 唔係 research 嘅下屬。
-4. **可審計**：transcript 就係實驗記錄，錯咗知邊個錯。
+1. **Role specialization > one giant prompt**: each agent has limited tools and a narrow view, so the hallucination surface is small.
+2. **Debate > voting**: the rebuttal round is the soul of multi-agent.
+3. **Independent risk**: it doesn't vote, but it has veto power — same as real funds, where risk is not a subordinate of research.
+4. **Auditability**: the transcript is the lab notebook; when wrong, you know who was wrong.
 
-## 下一步
+## Next steps
 
-- FinBERT 實裝（`pip install transformers torch`，改 `use_finbert=True`）
-- NewsAPI 接實時新聞流
-- walk-forward：每個月跑一次辯論，計決策命中率（紙上交易）
-- 第二個交易員：bull/bear 雙交易員辯論（原論文架構）
+- Real FinBERT (`pip install transformers torch`, set `use_finbert=True`)
+- Live news via NewsAPI
+- Walk-forward: run the debate monthly and score decision hit-rate (paper trading)
+- A second trader: bull/bear dual-trader debate (the original paper's architecture)
